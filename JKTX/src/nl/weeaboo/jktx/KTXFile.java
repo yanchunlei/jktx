@@ -19,10 +19,15 @@
 
 package nl.weeaboo.jktx;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public class KTXFile {
 
@@ -31,12 +36,54 @@ public class KTXFile {
 	private KTXTextureData textureData;
 	
 	public KTXFile() {
-		header = new KTXHeader();
-		meta = new KTXMetaData();
-		textureData = new KTXTextureData();
+		clear0();
 	}
 	
 	//Functions
+	public void clear() {
+		clear0();
+	}
+	
+	private void clear0() {
+		header = new KTXHeader();
+		meta = new KTXMetaData();
+		textureData = new KTXTextureData();		
+	}
+	
+	public void initFromImage(BufferedImage image) {
+		clear();
+		
+		int iw = image.getWidth();
+		int ih = image.getHeight();
+		boolean hasAlpha = image.getColorModel().hasAlpha();
+		if (hasAlpha) {
+			header.setGLFormat(GLConstants.GL_RGBA8, GLConstants.GL_RGBA, GLConstants.GL_BGRA,
+					GLConstants.GL_UNSIGNED_INT_8_8_8_8_REV, 1);
+		} else {
+			header.setGLFormat(GLConstants.GL_RGB8, GLConstants.GL_RGB, GLConstants.GL_RGB,
+					GLConstants.GL_UNSIGNED_BYTE, 1);
+		}
+		header.setDimensions(iw, ih, 0);
+		
+		ByteBuffer buf = ByteBuffer.allocateDirect(iw * ih * 4);
+		buf.order(ByteOrder.nativeOrder());
+		for (int y = 0; y < ih; y++) {
+			for (int x = 0; x < iw; x++) {
+				int argb = image.getRGB(x, y);
+				if (hasAlpha) {
+					buf.putInt(argb);
+				} else {
+					buf.put((byte)(argb>>16));
+					buf.put((byte)(argb>>8 ));
+					buf.put((byte)(argb    ));
+				}
+			}
+		}
+		buf.rewind();
+		
+		textureData.setPixels(buf);
+	}
+	
 	public void read(File file) throws KTXFormatException, IOException {
 		FileInputStream fin = new FileInputStream(file);
 		try {
@@ -45,10 +92,31 @@ public class KTXFile {
 			fin.close();
 		}
 	}
+	
 	public void read(InputStream in) throws KTXFormatException, IOException {
+		clear();
+
 		header.read(in);
-		meta.read(header, in);
-		textureData.readMipmaps(header, in);
+		meta.read(in, header.getBytesOfKeyValueData());
+		textureData.readMipmaps(in, header.getByteOrder(), header.getGLTypeSize(),
+				header.getNumberOfMipmapLevels(), header.getNumberOfFaces());
+	}
+	
+	public void write(File file) throws IOException {
+		FileOutputStream fout = new FileOutputStream(file);
+		try {
+			write(fout);
+		} finally {
+			fout.close();
+		}
+	}
+	
+	public void write(OutputStream out) throws IOException {
+		header.setBytesOfKeyValueData(meta.calculateRequiredBytes());
+		
+		header.write(out);
+		meta.write(out);
+		textureData.writeMipmaps(out, header.getByteOrder(), header.getGLTypeSize());
 	}
 	
 	@Override

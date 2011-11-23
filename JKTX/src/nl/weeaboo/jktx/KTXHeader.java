@@ -21,6 +21,7 @@ package nl.weeaboo.jktx;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -49,7 +50,16 @@ public class KTXHeader {
 	private int numberOfMipmapLevels;
 	private int bytesOfKeyValueData;
 	
-	public KTXHeader() {		
+	public KTXHeader() {
+		byteOrder = ByteOrder.nativeOrder();
+		byteOrderNative = true;
+		glType = GLConstants.GL_UNSIGNED_INT_8_8_8_8_REV;
+		glTypeSize = 4;
+		glFormat = GLConstants.GL_BGRA;
+		glInternalFormat = GLConstants.GL_RGBA8;
+		glBaseInternalFormat = GLConstants.GL_RGBA;
+		numberOfFaces = 1;
+		numberOfMipmapLevels = 1;
 	}
 	
 	//Functions
@@ -119,6 +129,41 @@ public class KTXHeader {
 		numberOfMipmapLevels = buf.getInt();
 		bytesOfKeyValueData = buf.getInt();
 	}
+	
+	public void write(OutputStream out) throws IOException {
+		ByteBuffer buf = ByteBuffer.allocate(HEADER_LENGTH);		
+		write(buf);
+		out.write(buf.array());
+	}
+	
+	public void write(ByteBuffer buf) {
+		ByteOrder oldOrder = buf.order();
+		try {
+			write0(buf);
+		} finally {
+			buf.order(oldOrder);
+		}
+	}
+	
+	private void write0(ByteBuffer buf) {
+		buf.order(byteOrder);
+		
+		buf.put(FILE_IDENTIFIER);
+		buf.putInt(0x04030201);
+		
+		buf.putInt(glType);
+		buf.putInt(glTypeSize);
+		buf.putInt(glFormat);
+		buf.putInt(glInternalFormat);
+		buf.putInt(glBaseInternalFormat);
+		buf.putInt(pixelWidth);
+		buf.putInt(pixelHeight);
+		buf.putInt(pixelDepth);
+		buf.putInt(numberOfArrayElements);
+		buf.putInt(numberOfFaces);
+		buf.putInt(numberOfMipmapLevels);
+		buf.putInt(bytesOfKeyValueData);
+	}
 
 	@Override
 	public String toString() {
@@ -129,10 +174,11 @@ public class KTXHeader {
 				glInternalFormat, glBaseInternalFormat, pixelWidth, pixelHeight, pixelDepth,
 				numberOfArrayElements, numberOfFaces, numberOfMipmapLevels, bytesOfKeyValueData);
 	}
-	
+		
 	//Getters
 	public ByteOrder getByteOrder() { return byteOrder; }
 	public boolean isByteOrderNative() { return byteOrderNative; }
+	
 	public int getGLType() { return glType; }
 	public int getGLTypeSize() { return glTypeSize; }
 	public int getGLFormat() { return glFormat; }
@@ -148,5 +194,36 @@ public class KTXHeader {
 	public int getNumberOfFaces() { return numberOfFaces; }
 	public int getNumberOfMipmapLevels() { return numberOfMipmapLevels; }
 	public int getBytesOfKeyValueData() { return bytesOfKeyValueData; }
+	
+	public void setByteOrder(ByteOrder order) {
+		this.byteOrder = order;
+		this.byteOrderNative = (order == ByteOrder.nativeOrder());
+	}
+	public void setGLFormat(int glInternalFormat, int glBaseInternalFormat, int glFormat, int glType,
+			int glTypeSize)
+	{
+		this.glInternalFormat = glInternalFormat;
+		this.glBaseInternalFormat = glBaseInternalFormat;
+		this.glFormat = glFormat;
+		this.glType = glType;
+		this.glTypeSize = glTypeSize;
+	}
+	public void setDimensions(int w, int h, int d) {
+		this.pixelWidth = w;
+		this.pixelHeight = h;
+		this.pixelDepth = d;
+	}
+	public void setNumberOfArrayElements(int numberOfArrayElements) {
+		this.numberOfArrayElements = numberOfArrayElements;
+	}
+	public void setNumberOfFaces(int numberOfFaces) {
+		this.numberOfFaces = numberOfFaces;
+	}
+	public void setNumberOfMipmapLevels(int numberOfMipmapLevels) {
+		this.numberOfMipmapLevels = numberOfMipmapLevels;
+	}
+	public void setBytesOfKeyValueData(int bytesOfKeyValueData) {
+		this.bytesOfKeyValueData = bytesOfKeyValueData;
+	}
 	
 }

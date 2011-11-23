@@ -21,103 +21,155 @@ package nl.weeaboo.jktx;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 
 public class KTXTextureData {
 
-	private ByteBuffer[][] data;
-	private int mipmapLevels;
-	private int faceCount;
-	private long totalBytes;
+	private MipmapLevel[] mipmaps;
+	private int numberOfMipmapLevels;
+	private int numberOfFaces;
 	
 	public KTXTextureData() {
-		data = new ByteBuffer[0][];
+		mipmaps = new MipmapLevel[0];
 	}
 	
 	//Functions
-	public void readMipmaps(KTXHeader header, InputStream in)
-		throws KTXFormatException, IOException
+	public void readMipmaps(InputStream in, ByteOrder inputOrder, int glTypeSize,
+			int numberOfMipmapLevels, int numberOfFaces) throws KTXFormatException, IOException
 	{
-		for (int level = 0; level < header.getNumberOfMipmapLevels(); level++) {
-			readMipmapLevel(header, in, level);
+		for (int level = 0; level < numberOfMipmapLevels; level++) {
+			readMipmapLevel(in, inputOrder, glTypeSize, level, numberOfFaces);
 		}
 	}
 	
-	public void readMipmapLevel(KTXHeader header, InputStream in, int level)
-		throws KTXFormatException, IOException
+	public void readMipmapLevel(InputStream in, ByteOrder inputOrder, int glTypeSize, int level,
+			int numberOfFaces) throws KTXFormatException, IOException
 	{
-		int len = KTXUtil.readInt(in, header.getByteOrder());
-		
-		ByteBuffer[] faces = new ByteBuffer[header.getNumberOfFaces()];
-		for (int n = 0; n < header.getNumberOfFaces(); n++) {
-			ByteBuffer buf = ByteBuffer.allocateDirect(KTXUtil.align4(len));
+		int bytesPerFace = KTXUtil.readInt(in, inputOrder);
+		ByteBuffer[] faces = new ByteBuffer[numberOfFaces];
+		for (int face = 0; face < numberOfFaces; face++) {
+			ByteBuffer buf = ByteBuffer.allocateDirect(KTXUtil.align4(bytesPerFace));
 			buf.order(ByteOrder.nativeOrder());
-			readFace(header, in, buf);
-			faces[n] = buf;
+			readFace(in, inputOrder, glTypeSize, buf);
+			buf.limit(bytesPerFace);
+			faces[face] = buf;
 		}
-		setMipmapLevel(level, faces);
+		setMipmapLevel(level, faces, bytesPerFace);
 	}
 	
-	public void readFace(KTXHeader header, InputStream in, ByteBuffer out)
+	protected void readFace(InputStream in, ByteOrder inputOrder, int glTypeSize, ByteBuffer out)
 		throws KTXFormatException, IOException
 	{
 		KTXUtil.readFully(in, out);
-		if (header.getByteOrder() != ByteOrder.nativeOrder()) {
-			switch (header.getGLTypeSize()) {
-			case 1: break;
-			case 2: KTXUtil.swapEndian16(out); break;
-			case 4: KTXUtil.swapEndian32(out); break;
-			default: throw new RuntimeException("Unimplemented glTypeSize: " + header.getGLTypeSize());
+		if (inputOrder != out.order()) {
+			KTXUtil.swapEndian(out, glTypeSize);
+		}
+	}
+	
+	public void writeMipmaps(OutputStream out, ByteOrder outputOrder, int glTypeSize) throws IOException {
+		for (int level = 0; level < getNumberOfMipmapLevels(); level++) {
+			writeMipmapLevel(out, outputOrder, glTypeSize, level);
+		}
+	}
+	
+	public void writeMipmapLevel(OutputStream out, ByteOrder outputOrder, int glTypeSize,
+			int mipmapLevel) throws IOException
+	{
+		MipmapLevel ml = getMipmapLevel(mipmapLevel);
+		int bytesPerFace = ml.getBytesPerFace();
+		KTXUtil.writeInt(out, outputOrder, bytesPerFace);
+		
+		byte[] padding = new byte[KTXUtil.align4(bytesPerFace) - bytesPerFace];
+		for (int face = 0; face < ml.getNumberOfFaces(); face++) {
+			ByteBuffer buf = ml.getFace(face);
+			if (buf.order() != outputOrder) {
+				KTXUtil.swapEndian(buf, glTypeSize);
 			}
+			KTXUtil.writeFully(out, buf);
+			if (buf.order() != outputOrder) {
+				KTXUtil.swapEndian(buf, glTypeSize);
+			}
+			out.write(padding);
 		}
 	}
 	
 	@Override
 	public String toString() {
-		return String.format("%s[mipmapLevels=%d, faces=%d, totalBytes=%d]", getClass().getSimpleName(),
-				getMipmapLevels(), getFaceCount(), getTotalBytes());
+		return String.format("%s[mipmapLevels=%d, faces=%d]", getClass().getSimpleName(),
+				getNumberOfMipmapLevels(), getNumberOfFaces());
 	}
 	
 	//Getters
+	private MipmapLevel getMipmapLevel(int level) {
+		return mipmaps[level];
+	}
 	public ByteBuffer getFace(int mipmapLevel, int faceIndex) {		
-		return data[mipmapLevel][faceIndex];
+		return getMipmapLevel(mipmapLevel).getFace(faceIndex);
 	}
-	public int getMipmapLevels() {
-		return mipmapLevels;
+	public int getBytesPerFace(int mipmapLevel) {
+		return getMipmapLevel(mipmapLevel).getBytesPerFace();
 	}
-	public int getFaceCount() {
-		return faceCount;
+	public int getNumberOfMipmapLevels() {
+		return numberOfMipmapLevels;
 	}
-	public long getTotalBytes() {
-		return totalBytes;
-	}
-	
-	private static long getTotalBytes(ByteBuffer[] buffers) {
-		long total = 0;
-		for (ByteBuffer b : buffers) {
-			total += (b != null ? b.remaining() : 0);
-		}
-		return total;
+	public int getNumberOfFaces() {
+		return numberOfFaces;
 	}
 	
 	//Setters
-	private void setMipmapLevel(int level, ByteBuffer[] faces) {
-		mipmapLevels = Math.max(mipmapLevels, level+1);
-		faceCount = Math.max(faceCount, faces.length);
+	public void setPixels(ByteBuffer pixels) {
+		setMipmapLevel(0, pixels);
+	}
+	public void setMipmapLevel(int level, ByteBuffer pixels) {
+		setMipmapLevel(level, new ByteBuffer[] {pixels}, pixels.remaining());
+	}
+	public void setMipmapLevel(int level, ByteBuffer[] faces, int bytesPerFace) {
+		MipmapLevel ml = new MipmapLevel(faces.length, bytesPerFace);
+		for (int face = 0; face < ml.getNumberOfFaces(); face++) {
+			ml.setFace(face, faces[face]);
+		}
+		setMipmapLevel(level, ml);
+	}
+	private void setMipmapLevel(int level, MipmapLevel ml) {
+		numberOfMipmapLevels = Math.max(numberOfMipmapLevels, level+1);
+		numberOfFaces = Math.max(numberOfFaces, ml.getNumberOfFaces());
 		
-		if (data.length < mipmapLevels) {
-			data = Arrays.copyOf(data, mipmapLevels);
+		if (mipmaps.length < numberOfMipmapLevels) {
+			mipmaps = Arrays.copyOf(mipmaps, numberOfMipmapLevels);
 		}
 		
-		if (data[level] != null) {
-			totalBytes -= getTotalBytes(data[level]);
+		mipmaps[level] = ml;
+	}
+	
+	//Inner Classes
+	private class MipmapLevel {
+		
+		private ByteBuffer[] faces;
+		private int bytesPerFace;
+		
+		public MipmapLevel(int numberOfFaces, int bytesPerFace) {
+			this.faces = new ByteBuffer[numberOfFaces];
+			this.bytesPerFace = bytesPerFace;
 		}
-		data[level] = faces;
-		if (data[level] != null) {
-			totalBytes += getTotalBytes(data[level]);
+
+		public int getBytesPerFace() {
+			return bytesPerFace;
 		}
+		
+		public ByteBuffer getFace(int index) {
+			return faces[index];
+		}		
+		public int getNumberOfFaces() {
+			return faces.length;
+		}
+		
+		public void setFace(int index, ByteBuffer buf) {
+			faces[index] = buf;
+		}
+		
 	}
 	
 }

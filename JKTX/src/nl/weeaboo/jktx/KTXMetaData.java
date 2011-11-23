@@ -21,14 +21,15 @@ package nl.weeaboo.jktx;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -38,20 +39,20 @@ public class KTXMetaData implements Iterable<Entry<String, byte[]>> {
 	private Map<String, byte[]> meta;
 	
 	public KTXMetaData() {
-		meta = new HashMap<String, byte[]>();
+		meta = new LinkedHashMap<String, byte[]>();
 	}
 	
-	public void read(KTXHeader header, InputStream in) throws KTXFormatException, IOException {
-		ByteBuffer buf = ByteBuffer.allocate(header.getBytesOfKeyValueData());
+	public void read(InputStream in, int length) throws KTXFormatException, IOException {
+		ByteBuffer buf = ByteBuffer.allocate(length);
 		KTXUtil.readFully(in, buf);
-		read(header, buf);
+		read(buf, length);
 	}
 	
-	public void read(KTXHeader header, ByteBuffer buf) throws KTXFormatException, UnsupportedEncodingException {
+	public void read(ByteBuffer buf, int length) throws KTXFormatException, UnsupportedEncodingException {
 		ByteOrder oldOrder = buf.order();
 		int oldLimit = buf.limit();
 		try {
-			read0(header, buf);
+			read0(buf, length);
 		} catch (BufferUnderflowException bue) {
 			throw new KTXFormatException("Unexpected end of input", bue);
 		} finally {
@@ -60,9 +61,8 @@ public class KTXMetaData implements Iterable<Entry<String, byte[]>> {
 		}
 	}
 	
-	private void read0(KTXHeader header, ByteBuffer buf) throws KTXFormatException, UnsupportedEncodingException {
-		buf.order(header.getByteOrder());		
-		buf.limit(header.getBytesOfKeyValueData());
+	private void read0(ByteBuffer buf, int length) throws KTXFormatException, UnsupportedEncodingException {
+		buf.limit(length);
 
 		byte[] temp = new byte[128];
 		while (buf.remaining() >= 4) {
@@ -86,6 +86,45 @@ public class KTXMetaData implements Iterable<Entry<String, byte[]>> {
 			//Store
 			meta.put(key, val);
 		}		
+	}
+	
+	public void write(OutputStream out) throws IOException {
+		ByteBuffer buf = ByteBuffer.allocate(calculateRequiredBytes());
+		write(buf);
+		out.write(buf.array());
+	}
+	
+	public void write(ByteBuffer buf) {
+		for (Entry<String, byte[]> entry : meta.entrySet()) {
+			String key = entry.getKey();
+			byte[] keyBytes;
+			try {
+				keyBytes = key.getBytes("UTF-8");
+			} catch (UnsupportedEncodingException e) {
+				keyBytes = key.getBytes();
+			}			
+			byte[] value = entry.getValue();
+			
+			buf.put(keyBytes);
+			buf.put((byte)0);
+			buf.put(value);
+		}
+	}
+	
+	public int calculateRequiredBytes() {
+		int r = 0;
+		for (Entry<String, byte[]> entry : meta.entrySet()) {
+			String key = entry.getKey();
+			byte[] keyBytes;
+			try {
+				keyBytes = key.getBytes("UTF-8");
+			} catch (UnsupportedEncodingException e) {
+				keyBytes = key.getBytes();
+			}
+			byte[] value = entry.getValue();
+			r += keyBytes.length + 1 + value.length;
+		}
+		return KTXUtil.align4(r);
 	}
 	
 	public void clear() {

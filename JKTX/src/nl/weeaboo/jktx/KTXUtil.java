@@ -22,6 +22,7 @@ package nl.weeaboo.jktx;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -38,6 +39,13 @@ final class KTXUtil {
 		return buf.getInt();
 	}
 	
+	public static void writeInt(OutputStream out, ByteOrder order, int i) throws IOException {
+		ByteBuffer buf = ByteBuffer.allocate(4);
+		buf.order(order);
+		buf.putInt(i);
+		out.write(buf.array(), buf.arrayOffset(), 4);		
+	}
+	
 	public static void readFully(InputStream in, ByteBuffer out) throws IOException {
 		out.mark();
 		if (out.hasArray()) {
@@ -51,10 +59,25 @@ final class KTXUtil {
 			while (out.hasRemaining()) {
 				int r = in.read(temp, 0, Math.min(temp.length, out.remaining()));
 				if (r < 0) throw new EOFException();
-				out.get(temp, 0, r);
+				out.put(temp, 0, r);
 			}
 		}
 		out.reset();
+	}
+	
+	public static void writeFully(OutputStream out, ByteBuffer buf) throws IOException {
+		buf.mark();
+		if (buf.hasArray()) {
+			out.write(buf.array(), buf.arrayOffset()+buf.position(), buf.remaining());
+		} else {
+			byte[] temp = new byte[Math.min(buf.remaining(), 8192)];
+			while (buf.hasRemaining()) {
+				int w = Math.min(temp.length, buf.remaining());
+				buf.get(temp, 0, w);
+				out.write(temp, 0, w);
+			}
+		}
+		buf.reset();
 	}
 	
 	public static String asString(byte[] b) {
@@ -73,6 +96,15 @@ final class KTXUtil {
 	
 	public static int align4(int i) {
 		return (i+3) & ~3;
+	}
+	
+	public static void swapEndian(ByteBuffer buf, int glTypeSize) {
+		switch (glTypeSize) {
+		case 1: break;
+		case 2: KTXUtil.swapEndian16(buf); break;
+		case 4: KTXUtil.swapEndian32(buf); break;
+		default: throw new RuntimeException("Unimplemented glTypeSize: " + glTypeSize);
+		}		
 	}
 	
 	public static void swapEndian16(ByteBuffer buf) {

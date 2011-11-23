@@ -17,33 +17,25 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-package nl.weeaboo.jktx.test;
+package nl.weeaboo.jktx;
 
-import java.io.File;
-import java.io.IOException;
+class GLConstants {
 
-import javax.imageio.ImageIO;
-
-import nl.weeaboo.jktx.KTXFile;
-import nl.weeaboo.jktx.KTXFormatException;
-
-public class KTXTest {
-
-	public static void main(String[] args) throws KTXFormatException, IOException {
-		for (String arg : args) {
-			File srcF = new File(arg);
-			File dstF = new File(srcF.getParent(), "conv-" + srcF.getName().substring(0, srcF.getName().lastIndexOf('.')+1) + "ktx");
-			
-			KTXFile file = new KTXFile();
-			if (srcF.getName().endsWith("ktx")) {
-				file.read(srcF);
-			} else {
-				file.initFromImage(ImageIO.read(srcF));
-			}
-			file.write(dstF);
-			System.out.println(file);
-			System.out.println("----------------------------------------");
-		}
+	//Internal formats
+	public static final int GL_RGB8  = 0x8051;
+	public static final int GL_RGBA8 = 0x8058;
+	
+	//Formats & base internal formats
+	public static final int GL_RGB  = 0x1907;
+	public static final int GL_RGBA = 0x1908;
+	public static final int GL_BGRA = 0x80E1;
+	
+	//Type
+	public static final int GL_UNSIGNED_BYTE = 0x1401;
+	public static final int GL_UNSIGNED_SHORT = 0x1403;
+	public static final int GL_UNSIGNED_INT_8_8_8_8_REV = 0x8367;
+	
+	private GLConstants() {		
 	}
 	
 }
