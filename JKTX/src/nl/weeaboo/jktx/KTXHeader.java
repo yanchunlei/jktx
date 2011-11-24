@@ -193,6 +193,7 @@ public class KTXHeader {
 	public int getNumberOfArrayElements() { return numberOfArrayElements; }
 	public int getNumberOfFaces() { return numberOfFaces; }
 	public int getNumberOfMipmapLevels() { return numberOfMipmapLevels; }
+	public boolean getAutoGenerateMipmap() { return numberOfMipmapLevels == 0; }
 	public int getBytesOfKeyValueData() { return bytesOfKeyValueData; }
 	
 	public void setByteOrder(ByteOrder order) {

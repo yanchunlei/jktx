@@ -82,7 +82,11 @@ final class KTXUtil {
 	
 	public static String asString(byte[] b) {
 		if (b == null) return null;
-		return asString(b, 0, b.length);
+		int len = b.length;
+		while (b[len-1] == '\0') {
+			len--;
+		}
+		return asString(b, 0, len);
 	}
 	public static String asString(byte[] b, int off, int len) {
 		if (b == null) return null;

@@ -31,19 +31,35 @@ public class KTXTest {
 
 	public static void main(String[] args) throws KTXFormatException, IOException {
 		for (String arg : args) {
-			File srcF = new File(arg);
-			File dstF = new File(srcF.getParent(), "conv-" + srcF.getName().substring(0, srcF.getName().lastIndexOf('.')+1) + "ktx");
-			
-			KTXFile file = new KTXFile();
-			if (srcF.getName().endsWith("ktx")) {
-				file.read(srcF);
+			File file = new File(arg);
+			if (file.isDirectory()) {
+				for (File f : file.listFiles()) {
+					if (f.getName().endsWith("ktx")) {
+						process(f);
+					}
+				}
 			} else {
-				file.initFromImage(ImageIO.read(srcF));
+				process(file);
 			}
-			file.write(dstF);
-			System.out.println(file);
-			System.out.println("----------------------------------------");
 		}
+	}
+	
+	private static void process(File srcF) throws KTXFormatException, IOException {
+		System.out.println(srcF);
+		
+		KTXFile file = new KTXFile();
+		if (srcF.getName().endsWith("ktx")) {
+			file.read(srcF);
+		} else {
+			file.initFromImage(ImageIO.read(srcF));
+		}
+		
+		System.out.println(file);
+		
+		//File dstF = new File(srcF.getParent(), "conv-" + srcF.getName().substring(0, srcF.getName().lastIndexOf('.')+1) + "ktx");
+		//file.write(dstF);
+		
+		System.out.println("----------------------------------------");		
 	}
 	
 }

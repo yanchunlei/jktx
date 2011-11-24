@@ -42,17 +42,25 @@ public class KTXMetaData implements Iterable<Entry<String, byte[]>> {
 		meta = new LinkedHashMap<String, byte[]>();
 	}
 	
-	public void read(InputStream in, int length) throws KTXFormatException, IOException {
+	public void read(InputStream in, ByteOrder inputOrder, int length)
+			throws KTXFormatException, IOException
+	{
+		length = KTXUtil.align4(length);
+		
 		ByteBuffer buf = ByteBuffer.allocate(length);
 		KTXUtil.readFully(in, buf);
-		read(buf, length);
+		read(buf, inputOrder, length);
 	}
 	
-	public void read(ByteBuffer buf, int length) throws KTXFormatException, UnsupportedEncodingException {
+	public void read(ByteBuffer buf, ByteOrder inputOrder, int length)
+			throws KTXFormatException, UnsupportedEncodingException
+	{
+		length = KTXUtil.align4(length);
+
 		ByteOrder oldOrder = buf.order();
 		int oldLimit = buf.limit();
 		try {
-			read0(buf, length);
+			read0(buf, inputOrder, length);
 		} catch (BufferUnderflowException bue) {
 			throw new KTXFormatException("Unexpected end of input", bue);
 		} finally {
@@ -61,7 +69,10 @@ public class KTXMetaData implements Iterable<Entry<String, byte[]>> {
 		}
 	}
 	
-	private void read0(ByteBuffer buf, int length) throws KTXFormatException, UnsupportedEncodingException {
+	private void read0(ByteBuffer buf, ByteOrder inputOrder, int length)
+			throws KTXFormatException, UnsupportedEncodingException
+	{
+		buf.order(inputOrder);
 		buf.limit(length);
 
 		byte[] temp = new byte[128];
@@ -139,12 +150,16 @@ public class KTXMetaData implements Iterable<Entry<String, byte[]>> {
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
+		sb.append("[");
+		int t = 0;
 		for (String key : getKeys()) {
-			if (sb.length() > 0) sb.append(", ");
+			if (t > 0) sb.append(", ");
 			sb.append(key);
-			sb.append("=");
+			sb.append(": ");
 			sb.append(getString(key));
+			t++;
 		}
+		sb.append("]");
 		return sb.toString();
 	}
 	

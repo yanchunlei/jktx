@@ -97,9 +97,9 @@ public class KTXFile {
 		clear();
 
 		header.read(in);
-		meta.read(in, header.getBytesOfKeyValueData());
+		meta.read(in, header.getByteOrder(), header.getBytesOfKeyValueData());
 		textureData.readMipmaps(in, header.getByteOrder(), header.getGLTypeSize(),
-				header.getNumberOfMipmapLevels(), header.getNumberOfFaces());
+				Math.max(1, header.getNumberOfMipmapLevels()), header.getNumberOfFaces());
 	}
 	
 	public void write(File file) throws IOException {
