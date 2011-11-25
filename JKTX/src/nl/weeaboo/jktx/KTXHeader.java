@@ -209,6 +209,9 @@ public class KTXHeader {
 		this.glType = glType;
 		this.glTypeSize = glTypeSize;
 	}
+	public void setCompressedGLFormat(int glInternalFormat, int glBaseInternalFormat) {
+		setGLFormat(glInternalFormat, glBaseInternalFormat, 0, 0, 1);
+	}
 	public void setDimensions(int w, int h, int d) {
 		this.pixelWidth = w;
 		this.pixelHeight = h;

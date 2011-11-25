@@ -149,7 +149,7 @@ public class KTXMetaData implements Iterable<Entry<String, byte[]>> {
 
 	@Override
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
+		StringBuilder sb = new StringBuilder(getClass().getSimpleName());
 		sb.append("[");
 		int t = 0;
 		for (String key : getKeys()) {

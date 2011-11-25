@@ -19,15 +19,23 @@
 
 package nl.weeaboo.jktx;
 
-class GLConstants {
+public final class GLConstants {
 
 	//Internal formats
 	public static final int GL_RGB8  = 0x8051;
 	public static final int GL_RGBA8 = 0x8058;
+	public static final int GL_COMPRESSED_RGB_S3TC_DXT1_EXT  = 0x83f0;
+	public static final int GL_COMPRESSED_RGBA_S3TC_DXT1_EXT = 0x83f1;
+	public static final int GL_COMPRESSED_RGBA_S3TC_DXT3_EXT = 0x83f2;
+	public static final int GL_COMPRESSED_RGBA_S3TC_DXT5_EXT = 0x83f3;
 	
-	//Formats & base internal formats
+	//Base internal formats
+	public static final int GL_RED  = 0x1903;
+	public static final int GL_RG   = 0x8227;
 	public static final int GL_RGB  = 0x1907;
 	public static final int GL_RGBA = 0x1908;
+	
+	//Formats
 	public static final int GL_BGRA = 0x80E1;
 	
 	//Type

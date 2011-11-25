@@ -65,7 +65,11 @@ public class KTXFile {
 		}
 		header.setDimensions(iw, ih, 0);
 		
-		ByteBuffer buf = ByteBuffer.allocateDirect(iw * ih * 4);
+		int bytesPerPixel = (hasAlpha ? 4 : 3);
+		int bytesPerRow = KTXUtil.align4(iw * bytesPerPixel);
+		int rowPad = bytesPerRow - (iw * bytesPerPixel);
+		
+		ByteBuffer buf = ByteBuffer.allocateDirect(bytesPerRow * ih);
 		buf.order(ByteOrder.nativeOrder());
 		for (int y = 0; y < ih; y++) {
 			for (int x = 0; x < iw; x++) {
@@ -78,6 +82,7 @@ public class KTXFile {
 					buf.put((byte)(argb    ));
 				}
 			}
+			buf.position(buf.position() + rowPad);
 		}
 		buf.rewind();
 		
