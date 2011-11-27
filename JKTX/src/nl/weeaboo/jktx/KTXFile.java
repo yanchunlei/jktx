@@ -58,7 +58,7 @@ public class KTXFile {
 		boolean hasAlpha = image.getColorModel().hasAlpha();
 		if (hasAlpha) {
 			header.setGLFormat(GLConstants.GL_RGBA8, GLConstants.GL_RGBA, GLConstants.GL_BGRA,
-					GLConstants.GL_UNSIGNED_INT_8_8_8_8_REV, 1);
+					GLConstants.GL_UNSIGNED_INT_8_8_8_8_REV, 4);
 		} else {
 			header.setGLFormat(GLConstants.GL_RGB8, GLConstants.GL_RGB, GLConstants.GL_RGB,
 					GLConstants.GL_UNSIGNED_BYTE, 1);
