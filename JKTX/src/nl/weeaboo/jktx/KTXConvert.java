@@ -45,6 +45,11 @@ public class KTXConvert {
 			}
 		}
 		
+		if (args.length < 1 || srcF == null) {
+			printUsage();
+			return;			
+		}
+        
 		if (dstF == null) {
 			String base = srcF.getName();
 			if (base.lastIndexOf('.') >= 0) {
@@ -52,12 +57,7 @@ public class KTXConvert {
 			}
 			dstF = new File(srcF.getParentFile(), base + ".ktx");
 		}
-		
-		if (args.length < 1 || srcF == null) {
-			printUsage();
-			return;			
-		}
-		
+				
 		if (info) {
 			printInfo(srcF);
 			return;
