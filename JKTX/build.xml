@@ -3,7 +3,7 @@
 <!-- Initialize Properties -->
 	
   <property name="build.sysclasspath" value="ignore"/>
-  <property name="project-name" value="jktx-1.3"/>
+  <property name="project-name" value="jktx-1.4"/>
         
   <path id="classpath">
     <fileset dir="." includes="lib/**/*.jar" />

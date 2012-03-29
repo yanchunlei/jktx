@@ -45,8 +45,7 @@ public class DDSFile {
 
 	private DDSHeader header;
 	private DDSHeader10 header10;
-	private ByteBuffer data;
-	private int dataBytesPerRow;
+	private MipmapData[] mipmaps;
 	
 	public DDSFile() {
 		clear0();
@@ -60,7 +59,7 @@ public class DDSFile {
 	private void clear0() {
 		header = new DDSHeader();
 		header10 = new DDSHeader10();
-		data = null;
+		mipmaps = null;
 	}
 	
 	public void read(File file) throws DDSFormatException, IOException {
@@ -83,18 +82,30 @@ public class DDSFile {
 		DDSPixelFormat pf = header.getPixelFormat();
 		int w = header.getWidth();
 		int h = header.getHeight();
-		dataBytesPerRow = (w * pf.getRGBBitCount() + 7) / 8;
-		if (pf.hasFlags(DDSConstants.DDPF_FOURCC)) {
-			int blockPixels = DDSUtil.getCompressedBlockPixels(pf.getFourCC());
-			int blockSize = DDSUtil.getCompressedBlockBytes(pf.getFourCC());
-			w = Math.max(1, (w+blockPixels-1)/blockPixels);
-			h = Math.max(1, (h+blockPixels-1)/blockPixels);
-			dataBytesPerRow = w * blockSize;
+		if (header.getDepth() > 1) {
+			throw new DDSFormatException("Only 2D textures are supported");
 		}
 		
-		data = ByteBuffer.allocateDirect(dataBytesPerRow * h);
-		data.order(ByteOrder.nativeOrder());
-		DDSUtil.readFully(in, data);
+		int blockSize = 1;
+		int blockBytes = (pf.getRGBBitCount()+7)/8;
+		if (pf.hasFlags(DDSConstants.DDPF_FOURCC)) {
+			blockSize = DDSUtil.getCompressedBlockPixels(pf.getFourCC());
+			blockBytes = DDSUtil.getCompressedBlockBytes(pf.getFourCC());
+		}
+		
+		int levels = header.getMipmapCount();
+		mipmaps = new MipmapData[levels];
+		for (int level = 0; level < levels; level++) {
+			int mw = Math.max(1, ((w>>level)+blockSize-1)/blockSize);
+			int mh = Math.max(1, ((h>>level)+blockSize-1)/blockSize);
+			int bytesPerRow = mw * blockBytes;
+			
+			ByteBuffer data = ByteBuffer.allocateDirect(bytesPerRow * mh);
+			data.order(ByteOrder.nativeOrder());
+			DDSUtil.readFully(in, data);
+			
+			mipmaps[level] = new MipmapData(data, bytesPerRow);
+		}
 	}
 	
 	public void write(File file) throws IOException {
@@ -127,6 +138,7 @@ public class DDSFile {
 		
 		KTXHeader kh = ktx.getHeader();
 		kh.setDimensions(header.getWidth(), header.getHeight(), header.getDepth());			
+		kh.setNumberOfMipmapLevels(header.getMipmapCount());
 		
 		KTXTextureData ktdata = ktx.getTextureData();
 		
@@ -151,7 +163,9 @@ public class DDSFile {
 			
 			kh.setCompressedGLFormat(glInternalFormat, glBaseInternalFormat);
 			
-			ktdata.setMipmapLevel(0, getData());
+			for (int level = 0; level < header.getMipmapCount(); level++) {
+				ktdata.setMipmapLevel(level, getDataBuffer(level));
+			}
 		} else {
 			int bits = pf.getRGBBitCount();
 			int amask = pf.getABitMask();
@@ -163,59 +177,64 @@ public class DDSFile {
 			int gshift = DDSUtil.calculateMaskShift(gmask);
 			int bshift = DDSUtil.calculateMaskShift(bmask);
 			
-			int outBytesPerRow = header.getWidth() * 4; //No need to align, 32-bit pixels are always aligned
-			int rowpad = 0; //Difference between outBytesPerRow and align4(outBytesPerRow)
-			if ((outBytesPerRow & 3) != 0) {
-				throw new RuntimeException("Internal output row alignment error: " + outBytesPerRow);
-			}
-			
-			ByteBuffer out = ByteBuffer.allocateDirect(outBytesPerRow * header.getHeight());
-			out.order(ByteOrder.nativeOrder());
-			
-			ByteBuffer data = getData();
-			data.mark();			
-			for (int y = 0; y < header.getHeight(); y++) {
-				for (int x = 0; x < header.getWidth(); x++) {
-					int pixel;
-					switch (bits) {
-					case 8:  pixel = data.get() & 0xFF; break;
-					case 16: pixel = data.getShort() & 0xFFFF; break;
-					case 24: {
-						pixel = data.getShort() & 0xFFFF;
-						if (data.order() == ByteOrder.LITTLE_ENDIAN) {
-							pixel = ((data.get()&0xFF)<<16)|pixel;
-						} else {
-							pixel = (pixel<<8)|(data.get()&0xFF);
-						}
-						break;
-					}
-					case 32: pixel = data.getInt(); break;
-					default: throw new DDSFormatException("Unsupported bit depth: " + bits);
-					}
-					
-					int a = Math.max(0, Math.min(255, (pixel & amask) >>> ashift));
-					int r = Math.max(0, Math.min(255, (pixel & rmask) >>> rshift));
-					int g = Math.max(0, Math.min(255, (pixel & gmask) >>> gshift));
-					int b = Math.max(0, Math.min(255, (pixel & bmask) >>> bshift));
-					
-					out.putInt((a<<24)|(r<<16)|(g<<8)|(b));
-				}
-				out.position(out.position() + rowpad);
-			}
-			data.reset();
-			
-			out.rewind();
-			
 			kh.setGLFormat(GLConstants.GL_RGBA8, GLConstants.GL_RGBA, GLConstants.GL_BGRA,
 					GLConstants.GL_UNSIGNED_INT_8_8_8_8_REV, 1);
-			ktdata.setMipmapLevel(0, out);
+			
+			for (int level = 0; level < header.getMipmapCount(); level++) {
+				int mw = Math.max(1, header.getWidth()>>level);
+				int mh = Math.max(1, header.getHeight()>>level);
+				
+				int outBytesPerRow = mw * 4; //No need to align, 32-bit pixels are always aligned
+				int rowpad = 0; //Difference between outBytesPerRow and align4(outBytesPerRow)
+				if ((outBytesPerRow & 3) != 0) {
+					throw new RuntimeException("Internal output row alignment error: " + outBytesPerRow);
+				}
+				
+				ByteBuffer out = ByteBuffer.allocateDirect(outBytesPerRow * mh);
+				out.order(ByteOrder.nativeOrder());
+				
+				ByteBuffer data = getDataBuffer(level);
+				data.mark();			
+				for (int y = 0; y < mh; y++) {
+					for (int x = 0; x < mw; x++) {
+						int pixel;
+						switch (bits) {
+						case 8:  pixel = data.get() & 0xFF; break;
+						case 16: pixel = data.getShort() & 0xFFFF; break;
+						case 24: {
+							pixel = data.getShort() & 0xFFFF;
+							if (data.order() == ByteOrder.LITTLE_ENDIAN) {
+								pixel = ((data.get()&0xFF)<<16)|pixel;
+							} else {
+								pixel = (pixel<<8)|(data.get()&0xFF);
+							}
+							break;
+						}
+						case 32: pixel = data.getInt(); break;
+						default: throw new DDSFormatException("Unsupported bit depth: " + bits);
+						}
+						
+						int a = Math.max(0, Math.min(255, (pixel & amask) >>> ashift));
+						int r = Math.max(0, Math.min(255, (pixel & rmask) >>> rshift));
+						int g = Math.max(0, Math.min(255, (pixel & gmask) >>> gshift));
+						int b = Math.max(0, Math.min(255, (pixel & bmask) >>> bshift));
+						
+						out.putInt((a<<24)|(r<<16)|(g<<8)|(b));
+					}
+					out.position(out.position() + rowpad);
+				}
+				data.reset();
+				out.rewind();
+				
+				ktdata.setMipmapLevel(level, out);
+			}
 		}
 	}
 	
 	@Override
 	public String toString() {
-		return String.format("%s:\n\theader=%s\n\theader10=%s\n\tpixels=[bytesPerRow=%d, data=%s]",
-				getClass().getSimpleName(), header, header10, dataBytesPerRow, data);
+		return String.format("%s:\n\theader=%s\n\theader10=%s]",
+				getClass().getSimpleName(), header, header10);
 	}
 	
 	//Getters
@@ -229,13 +248,33 @@ public class DDSFile {
 		DDSPixelFormat pf = header.getPixelFormat();
 		return pf.hasFlags(DDSConstants.DDPF_FOURCC) && pf.getFourCC() == DDSConstants.FOURCC_DX10;
 	}
-	public ByteBuffer getData() {
-		return data;
+	public ByteBuffer getDataBuffer(int level) {
+		return mipmaps[level].getDataBuffer();
 	}
-	public int getDataBytesPerRow() {
-		return dataBytesPerRow;
+	public int getRowBytes(int level) {
+		return mipmaps[level].getRowBytes();
+	}
+	public int getDataBytes(int level) {
+		return mipmaps[level].getDataBytes();
 	}
 	
 	//Setters
+	
+	//Inner Classes
+	private class MipmapData {
+		
+		private final ByteBuffer data;
+		private final int rowBytes;
+		
+		public MipmapData(ByteBuffer data, int rowBytes) {
+			this.data = data;
+			this.rowBytes = rowBytes;
+		}
+		
+		public ByteBuffer getDataBuffer() { return data; }
+		public int getRowBytes() { return rowBytes; }
+		public int getDataBytes() { return data.limit(); }
+		
+	}
 	
 }

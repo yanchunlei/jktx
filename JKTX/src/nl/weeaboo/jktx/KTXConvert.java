@@ -80,9 +80,9 @@ public class KTXConvert {
 	
 	protected static void printUsage() {
 		System.err.println("Usage: java -jar jktx.jar infile outfile.ktx"
-				+ "\n\tWhere infile is in DDS format or any format supported by Java ImageIO"
-				+ "\n\t  or: java -jar jktx.jar -info infile"
-				+ "\n\tWhere infile is a DDS or KTX file");
+				+ "\n         Where infile is in DDS format or any format supported by Java ImageIO"
+				+ "\n   or: java -jar jktx.jar -info infile"
+				+ "\n         Where infile is a DDS or KTX file");
 	}
 	
 	public static void printInfo(File srcF) throws IOException {
