@@ -22,9 +22,13 @@ package nl.weeaboo.dds;
 import static nl.weeaboo.dds.DDSConstants.FOURCC_DXT1;
 import static nl.weeaboo.dds.DDSConstants.FOURCC_DXT3;
 import static nl.weeaboo.dds.DDSConstants.FOURCC_DXT5;
+import static nl.weeaboo.dds.DDSConstants.FOURCC_ATCI;
+import static nl.weeaboo.dds.DDSConstants.FOURCC_ATCA;
 import static nl.weeaboo.jktx.GLConstants.GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
 import static nl.weeaboo.jktx.GLConstants.GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
 import static nl.weeaboo.jktx.GLConstants.GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+import static nl.weeaboo.jktx.GLConstants.GL_ATC_RGBA_INTERPOLATED_ALPHA_AMD;
+import static nl.weeaboo.jktx.GLConstants.GL_ATC_RGBA_EXPLICIT_ALPHA_AMD;
 import static nl.weeaboo.jktx.GLConstants.GL_RGBA;
 
 import java.io.File;
@@ -156,6 +160,14 @@ public class DDSFile {
 				break;
 			case FOURCC_DXT5:
 				glInternalFormat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+				glBaseInternalFormat = GL_RGBA;
+				break;
+			case FOURCC_ATCI:
+				glInternalFormat = GL_ATC_RGBA_INTERPOLATED_ALPHA_AMD;
+				glBaseInternalFormat = GL_RGBA;
+				break;
+			case FOURCC_ATCA:
+				glInternalFormat = GL_ATC_RGBA_EXPLICIT_ALPHA_AMD;
 				glBaseInternalFormat = GL_RGBA;
 				break;
 			default: throw new DDSFormatException("Unsupported pixel format: " + header.getPixelFormat());

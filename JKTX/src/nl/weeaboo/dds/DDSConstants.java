@@ -29,6 +29,9 @@ final class DDSConstants {
 	public static final int FOURCC_DXT5 = 0x35545844;
 	public static final int FOURCC_BC1  = 0x20314342;
 	public static final int FOURCC_BC4  = 0x20344342;
+
+	public static final int FOURCC_ATCI = 0x49435441;
+	public static final int FOURCC_ATCA = 0x41435441;
 	
 	private DDSConstants() {		
 	}

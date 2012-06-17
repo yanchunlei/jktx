@@ -28,6 +28,8 @@ public final class GLConstants {
 	public static final int GL_COMPRESSED_RGBA_S3TC_DXT1_EXT = 0x83f1;
 	public static final int GL_COMPRESSED_RGBA_S3TC_DXT3_EXT = 0x83f2;
 	public static final int GL_COMPRESSED_RGBA_S3TC_DXT5_EXT = 0x83f3;
+	public static final int GL_ATC_RGBA_EXPLICIT_ALPHA_AMD = 0x8C93;
+	public static final int GL_ATC_RGBA_INTERPOLATED_ALPHA_AMD = 0x87EE;
 	
 	//Base internal formats
 	public static final int GL_RED  = 0x1903;
