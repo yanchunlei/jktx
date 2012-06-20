@@ -161,7 +161,7 @@ public class DDSHeader {
 	public int getWidth() { return width; }
 	public int getPitchOrLinearSize() { return pitchOrLinearSize; }
 	public int getDepth() { return depth; }
-	public int getMipmapCount() { return mipmapCount; }
+	public int getMipmapCount() { return hasFlags(DDSConstants.DDSD_MIPMAPCOUNT) ? mipmapCount : 1; }
 	public int[] getReserved1() { return reserved1.clone(); }
 	public DDSPixelFormat getPixelFormat() { return pf; }
 	public int[] getCaps() { return caps.clone(); }

@@ -64,6 +64,7 @@ final class DDSUtil {
 	 */
 	public static int getCompressedBlockBytes(int fourCC) {
 		switch (fourCC) {
+		case DDSConstants.FOURCC_ETC:
 		case DDSConstants.FOURCC_DXT1:
 		case DDSConstants.FOURCC_BC1:
 		case DDSConstants.FOURCC_BC4:

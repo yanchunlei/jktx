@@ -49,7 +49,8 @@ public class DDSTest {
 		DDSFile file = new DDSFile();
 		file.read(srcF);
 		
-		KTXFile ktx = file.toKTX();
+		KTXFile ktx = new KTXFile();
+		file.toKTX(ktx, false, false);
 		File dstF = new File(srcF.getParent(), "out.ktx");
 		ktx.write(dstF);
 		

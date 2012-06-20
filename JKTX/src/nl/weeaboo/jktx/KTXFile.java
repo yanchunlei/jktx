@@ -51,17 +51,30 @@ public class KTXFile {
 	}
 	
 	public void initFromImage(BufferedImage image) {
+		initFromImage(image, false, false);
+	}
+	public void initFromImage(BufferedImage image, boolean supportsBGRA, boolean supportsUINT8888) {
 		clear();
 		
 		int iw = image.getWidth();
 		int ih = image.getHeight();
 		boolean hasAlpha = image.getColorModel().hasAlpha();
+		int fmt, type, typeSize;
+		
 		if (hasAlpha) {
-			header.setGLFormat(GLConstants.GL_RGBA8, GLConstants.GL_RGBA, GLConstants.GL_BGRA,
-					GLConstants.GL_UNSIGNED_INT_8_8_8_8_REV, 4);
+			fmt = (supportsBGRA ? GLConstants.GL_BGRA : GLConstants.GL_RGBA);
+			type = GLConstants.GL_UNSIGNED_BYTE;
+			typeSize = 1;
+			if (supportsUINT8888) {
+				type = GLConstants.GL_UNSIGNED_INT_8_8_8_8_REV;
+				typeSize = 4;
+			}			
+			header.setGLFormat(GLConstants.GL_RGBA8, GLConstants.GL_RGBA, fmt, type, typeSize);
 		} else {
-			header.setGLFormat(GLConstants.GL_RGB8, GLConstants.GL_RGB, GLConstants.GL_RGB,
-					GLConstants.GL_UNSIGNED_BYTE, 1);
+			fmt = GLConstants.GL_RGB;
+			type = GLConstants.GL_UNSIGNED_BYTE;
+			typeSize = 1;
+			header.setGLFormat(GLConstants.GL_RGB8, GLConstants.GL_RGB, fmt, type, typeSize);
 		}
 		header.setDimensions(iw, ih, 0);
 		
@@ -75,7 +88,14 @@ public class KTXFile {
 			for (int x = 0; x < iw; x++) {
 				int argb = image.getRGB(x, y);
 				if (hasAlpha) {
-					buf.putInt(argb);
+					if (type == GLConstants.GL_BGRA) {
+						buf.putInt(argb);
+					} else {
+						buf.put((byte)(argb>>16));
+						buf.put((byte)(argb>>8 ));
+						buf.put((byte)(argb    ));
+						buf.put((byte)(argb>>24));
+					}
 				} else {
 					buf.put((byte)(argb>>16));
 					buf.put((byte)(argb>>8 ));

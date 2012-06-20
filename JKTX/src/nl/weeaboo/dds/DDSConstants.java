@@ -21,6 +21,15 @@ package nl.weeaboo.dds;
 
 final class DDSConstants {
 
+	public static final int DDSD_CAPS        = 0x1;
+	public static final int DDSD_HEIGHT      = 0x2;
+	public static final int DDSD_WIDTH       = 0x4;
+	public static final int DDSD_PITCH       = 0x8;
+	public static final int DDSD_PIXELFORMAT = 0x1000;
+	public static final int DDSD_MIPMAPCOUNT = 0x20000;
+	public static final int DDSD_LINEARSIZE  = 0x80000;
+	public static final int DDSD_DEPTH       = 0x800000;
+	
 	public static final int DDPF_FOURCC	= 0x4;
 	
 	public static final int FOURCC_DX10 = 0x30315844;
@@ -32,6 +41,7 @@ final class DDSConstants {
 
 	public static final int FOURCC_ATCI = 0x49435441;
 	public static final int FOURCC_ATCA = 0x41435441;
+	public static final int FOURCC_ETC  = 0x20435445;
 	
 	private DDSConstants() {		
 	}

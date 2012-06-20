@@ -33,12 +33,21 @@ public class KTXConvert {
 	public static void main(String[] args) throws IOException {		
 		File srcF = null, dstF = null;
 		boolean info = false;
+		boolean bgra = false;
+		boolean uint8888 = false;
 		
 		int opt = 0;
 		while (opt < args.length) {
 			String arg = args[opt++];
 			if (arg.equals("-info")) {
 				info = true;
+			} else if (arg.equals("-desktop")) {
+				bgra = true;
+				uint8888 = true;
+			} else if (arg.equals("-bgra")) {
+				bgra = true;
+			} else if (arg.equals("-uint8888")) {
+				uint8888 = true;
 			} else {
 				if (srcF == null) srcF = new File(arg);
 				else if (dstF == null) dstF = new File(arg);
@@ -71,7 +80,7 @@ public class KTXConvert {
 			}
 		}
 		
-		KTXFile ktx = convertToKTX(srcF, dstF);
+		KTXFile ktx = convertToKTX(srcF, dstF, bgra, uint8888);
 		System.out.println("----------------------------------------");
 		System.out.println(ktx);
 		System.out.println("----------------------------------------");
@@ -79,10 +88,15 @@ public class KTXConvert {
 	}
 	
 	protected static void printUsage() {
-		System.err.println("Usage: java -jar jktx.jar infile outfile.ktx"
-				+ "\n         Where infile is in DDS format or any format supported by Java ImageIO"
-				+ "\n   or: java -jar jktx.jar -info infile"
-				+ "\n         Where infile is a DDS or KTX file");
+		System.err.println(
+				    " Usage: java -jar jktx.jar [flags] infile outfile.ktx"
+				+ "\n        Where infile is in DDS format or any format supported by Java ImageIO"
+				+ "\n    flags:"
+				+ "\n        -desktop    Implies -bgra and -uint8888"
+				+ "\n        -bgra       Allows generated files to use BGRA internal format"
+				+ "\n        -uint8888   Allows generated files to use UNSIGNED_INT_8_8_8_8_REV"
+				+ "\n    or: java -jar jktx.jar -info infile"
+				+ "\n        Where infile is a DDS or KTX file");
 	}
 	
 	public static void printInfo(File srcF) throws IOException {
@@ -114,22 +128,22 @@ public class KTXConvert {
 		System.out.println("----------------------------------------");
 	}
 
-	public static KTXFile convertToKTX(File srcF, File dstF) throws IOException {
-		KTXFile ktx;
+	public static KTXFile convertToKTX(File srcF, File dstF, boolean supportBGRA, boolean supportUINT8888)
+			throws IOException
+	{
+		KTXFile ktx = new KTXFile();
 		if (srcF.getName().endsWith(".dds")) {
 			DDSFile file = new DDSFile();
 			try {
-				file.read(srcF);
-				ktx = file.toKTX();
+				file.read(srcF);			
+				file.toKTX(ktx, supportBGRA, supportUINT8888);
 			} catch (DDSFormatException e) {
 				throw new IOException("Error parsing DDS file: " + srcF, e);
 			}
 		} else {
 			BufferedImage image = ImageIO.read(srcF);
-			ktx = new KTXFile();
-			ktx.initFromImage(image);
-		}
-		
+			ktx.initFromImage(image, supportBGRA, supportUINT8888);
+		}		
 		ktx.write(dstF);		
 		return ktx;
 	}

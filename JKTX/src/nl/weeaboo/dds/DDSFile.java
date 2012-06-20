@@ -24,12 +24,15 @@ import static nl.weeaboo.dds.DDSConstants.FOURCC_DXT3;
 import static nl.weeaboo.dds.DDSConstants.FOURCC_DXT5;
 import static nl.weeaboo.dds.DDSConstants.FOURCC_ATCI;
 import static nl.weeaboo.dds.DDSConstants.FOURCC_ATCA;
+import static nl.weeaboo.dds.DDSConstants.FOURCC_ETC;
 import static nl.weeaboo.jktx.GLConstants.GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
 import static nl.weeaboo.jktx.GLConstants.GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
 import static nl.weeaboo.jktx.GLConstants.GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
 import static nl.weeaboo.jktx.GLConstants.GL_ATC_RGBA_INTERPOLATED_ALPHA_AMD;
 import static nl.weeaboo.jktx.GLConstants.GL_ATC_RGBA_EXPLICIT_ALPHA_AMD;
+import static nl.weeaboo.jktx.GLConstants.GL_ETC1_RGB8_OES;
 import static nl.weeaboo.jktx.GLConstants.GL_RGBA;
+import static nl.weeaboo.jktx.GLConstants.GL_RGB;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -128,12 +131,7 @@ public class DDSFile {
 		}
 	}
 	
-	public KTXFile toKTX() throws DDSFormatException {
-		KTXFile ktx = new KTXFile();
-		toKTX(ktx);
-		return ktx;
-	}
-	public void toKTX(KTXFile ktx) throws DDSFormatException {
+	public void toKTX(KTXFile ktx, boolean supportBGRA, boolean supportUINT8888) throws DDSFormatException {
 		ktx.clear();
 		
 		if (header.getDepth() != 0) {
@@ -170,6 +168,10 @@ public class DDSFile {
 				glInternalFormat = GL_ATC_RGBA_EXPLICIT_ALPHA_AMD;
 				glBaseInternalFormat = GL_RGBA;
 				break;
+			case FOURCC_ETC:
+				glInternalFormat = GL_ETC1_RGB8_OES;
+				glBaseInternalFormat = GL_RGB;
+				break;
 			default: throw new DDSFormatException("Unsupported pixel format: " + header.getPixelFormat());
 			}
 			
@@ -189,8 +191,16 @@ public class DDSFile {
 			int gshift = DDSUtil.calculateMaskShift(gmask);
 			int bshift = DDSUtil.calculateMaskShift(bmask);
 			
-			kh.setGLFormat(GLConstants.GL_RGBA8, GLConstants.GL_RGBA, GLConstants.GL_BGRA,
-					GLConstants.GL_UNSIGNED_INT_8_8_8_8_REV, 1);
+			int fmt = (supportBGRA ? GLConstants.GL_BGRA : GLConstants.GL_RGBA);
+			int type, typeSize;
+			if (supportUINT8888) {
+				type = GLConstants.GL_UNSIGNED_INT_8_8_8_8_REV;
+				typeSize = 4;
+			} else {
+				type = GLConstants.GL_UNSIGNED_BYTE;
+				typeSize = 1;
+			}
+			kh.setGLFormat(GLConstants.GL_RGBA8, GLConstants.GL_RGBA, fmt, type, typeSize);
 			
 			for (int level = 0; level < header.getMipmapCount(); level++) {
 				int mw = Math.max(1, header.getWidth()>>level);
@@ -231,7 +241,14 @@ public class DDSFile {
 						int g = Math.max(0, Math.min(255, (pixel & gmask) >>> gshift));
 						int b = Math.max(0, Math.min(255, (pixel & bmask) >>> bshift));
 						
-						out.putInt((a<<24)|(r<<16)|(g<<8)|(b));
+						if (fmt == GLConstants.GL_BGRA) {
+							out.putInt((a<<24)|(r<<16)|(g<<8)|(b));
+						} else {
+							out.put((byte)r);
+							out.put((byte)g);
+							out.put((byte)b);
+							out.put((byte)a);
+						}
 					}
 					out.position(out.position() + rowpad);
 				}
