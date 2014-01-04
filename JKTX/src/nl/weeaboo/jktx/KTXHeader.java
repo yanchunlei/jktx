@@ -64,15 +64,21 @@ public class KTXHeader {
 	
 	//Functions
 	public void read(InputStream in) throws KTXFormatException, IOException {
+		read(in, true);
+	}
+	public void read(InputStream in, boolean strict) throws KTXFormatException, IOException {	
 		ByteBuffer buf = ByteBuffer.allocate(HEADER_LENGTH);
 		KTXUtil.readFully(in, buf);
-		read(buf);
+		read(buf, strict);
 	}
 	
 	public void read(ByteBuffer buf) throws KTXFormatException {
+		read(buf, true);
+	}
+	public void read(ByteBuffer buf, boolean strict) throws KTXFormatException {	
 		ByteOrder oldOrder = buf.order();
 		try {
-			read0(buf);
+			read0(buf, strict);
 		} catch (BufferUnderflowException bue) {
 			throw new KTXFormatException("Unexpected end of input", bue);
 		} finally {
@@ -80,7 +86,7 @@ public class KTXHeader {
 		}
 	}
 	
-	private void read0(ByteBuffer buf) throws KTXFormatException {
+	private void read0(ByteBuffer buf, boolean strict) throws KTXFormatException {
 		buf.order(ByteOrder.nativeOrder());
 		
 		//Check file identifier
@@ -124,10 +130,29 @@ public class KTXHeader {
 		pixelWidth = buf.getInt();
 		pixelHeight = buf.getInt();
 		pixelDepth = buf.getInt();
+		if (pixelWidth < 0 || pixelHeight < 0 || pixelDepth < 0) {
+			throw new KTXFormatException(String.format("Invalid number of pixel dimensions: %dx%dx%d", pixelWidth, pixelHeight, pixelDepth));			
+		}
 		numberOfArrayElements = buf.getInt();
+		if (numberOfArrayElements < 0) {
+			throw new KTXFormatException(String.format("Invalid number of array elements: %d", numberOfArrayElements));			
+		}
 		numberOfFaces = buf.getInt();
+		if (numberOfFaces != 1 && numberOfFaces != 6) {
+			if (strict) {
+				throw new KTXFormatException(String.format("Invalid number of faces: %d", numberOfFaces));			
+			} else if (numberOfFaces <= 0) {
+				numberOfFaces = 1;				
+			}
+		}
 		numberOfMipmapLevels = buf.getInt();
+		if (numberOfMipmapLevels < 0) {
+			throw new KTXFormatException(String.format("Invalid number of mipmap levels: %d", numberOfMipmapLevels));			
+		}
 		bytesOfKeyValueData = buf.getInt();
+		if (bytesOfKeyValueData < 0) {
+			throw new KTXFormatException(String.format("Invalid key/value byte size: %d", bytesOfKeyValueData));			
+		}
 	}
 	
 	public void write(OutputStream out) throws IOException {

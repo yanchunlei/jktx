@@ -3,7 +3,7 @@
 <!-- Initialize Properties -->
 	
   <property name="build.sysclasspath" value="ignore"/>
-  <property name="project-name" value="jktx-1.6"/>
+  <property name="project-name" value="jktx-1.7"/>
         
   <path id="classpath">
     <fileset dir="." includes="lib/**/*.jar" />
@@ -27,9 +27,12 @@
   <target name="compile">  
     <mkdir dir="bin"/>
         
-    <javac srcdir="src" destdir="bin" encoding="UTF-8" debug="true" includeantruntime="false">
-	  <classpath refid="classpath" />
-	</javac>
+    <javac srcdir="src" destdir="bin"
+      source="1.6" target="1.6"
+      encoding="UTF-8" debug="true" includeantruntime="false">
+      
+      <classpath refid="classpath" />
+    </javac>
 
 	<!-- Copy resources (embedded images, etc.) to bin dir -->
     <copy todir="bin">

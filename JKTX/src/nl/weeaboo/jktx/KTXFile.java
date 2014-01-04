@@ -110,7 +110,7 @@ public class KTXFile {
 	}
 	
 	public void read(File file) throws KTXFormatException, IOException {
-		FileInputStream fin = new FileInputStream(file);
+		InputStream fin = new FileInputStream(file);
 		try {
 			read(fin);
 		} finally {
@@ -124,7 +124,9 @@ public class KTXFile {
 		header.read(in);
 		meta.read(in, header.getByteOrder(), header.getBytesOfKeyValueData());
 		textureData.readMipmaps(in, header.getByteOrder(), header.getGLTypeSize(),
-				Math.max(1, header.getNumberOfMipmapLevels()), header.getNumberOfFaces());
+				Math.max(1, header.getNumberOfMipmapLevels()),
+				Math.max(1, header.getNumberOfArrayElements()),
+				header.getNumberOfFaces());
 	}
 	
 	public void write(File file) throws IOException {

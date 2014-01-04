@@ -47,22 +47,29 @@ final class KTXUtil {
 	}
 	
 	public static void readFully(InputStream in, ByteBuffer out) throws IOException {
-		out.mark();
-		if (out.hasArray()) {
-			while (out.hasRemaining()) {
-				int r = in.read(out.array(), out.arrayOffset()+out.position(), out.remaining());
-				if (r < 0) throw new EOFException();
-				out.position(out.position() + r);
-			}
-		} else {
-			byte[] temp = new byte[Math.min(out.remaining(), 8192)];
-			while (out.hasRemaining()) {
-				int r = in.read(temp, 0, Math.min(temp.length, out.remaining()));
-				if (r < 0) throw new EOFException();
-				out.put(temp, 0, r);
-			}
+		if (!out.hasRemaining()) {
+			return;
 		}
-		out.reset();
+		
+		int oldpos = out.position();
+		try {
+			if (out.hasArray()) {
+				while (out.hasRemaining()) {
+					int r = in.read(out.array(), out.arrayOffset()+out.position(), out.remaining());
+					if (r < 0) throw new EOFException();
+					out.position(out.position() + r);
+				}
+			} else {
+				byte[] temp = new byte[Math.min(out.remaining(), 8192)];
+				while (out.hasRemaining()) {
+					int r = in.read(temp, 0, Math.min(temp.length, out.remaining()));
+					if (r < 0) throw new EOFException();
+					out.put(temp, 0, r);
+				}
+			}
+		} finally {
+			out.position(oldpos);
+		}
 	}
 	
 	public static void writeFully(OutputStream out, ByteBuffer buf) throws IOException {
